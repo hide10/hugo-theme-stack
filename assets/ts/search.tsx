@@ -39,6 +39,7 @@ function escapeRegExp(string: string) {
 }
 
 class Search {
+    private static readonly SEARCH_DEBOUNCE_MS = 280;
     private data: pageData[];
     private form: HTMLFormElement;
     private input: HTMLInputElement;
@@ -46,6 +47,7 @@ class Search {
     private resultTitle: HTMLHeadElement;
     private resultTitleTemplate: string;
     private container: HTMLDivElement;
+    private searchDebounceTimer: number | null = null;
 
     constructor({ form, input, list, resultTitle, resultTitleTemplate }: {
         form: HTMLFormElement,
@@ -243,15 +245,22 @@ class Search {
 
             Search.updateQueryString(keywords, true);
 
+            if (this.searchDebounceTimer !== null) {
+                window.clearTimeout(this.searchDebounceTimer);
+                this.searchDebounceTimer = null;
+            }
+
             if (keywords === '') {
                 lastSearch = '';
                 return this.clear();
             }
 
             if (lastSearch === keywords) return;
-            lastSearch = keywords;
-
-            this.doSearch(keywords.split(' '));
+            this.searchDebounceTimer = window.setTimeout(() => {
+                lastSearch = keywords;
+                this.doSearch(keywords.split(' '));
+                this.searchDebounceTimer = null;
+            }, Search.SEARCH_DEBOUNCE_MS);
         }
 
         this.input.addEventListener('input', eventHandler);
